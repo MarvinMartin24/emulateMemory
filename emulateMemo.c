@@ -1,10 +1,8 @@
 #include<stdio.h>
+#include <stdlib.h>
 #include<stdbool.h>
 
-#ifndef __MMU__H__
-#define __MMU__H__
 #define SIZE 65536
-typedef short byte_t;
 typedef int address_t;
 
 
@@ -18,6 +16,7 @@ typedef struct memoBlock {
 
 
 typedef struct {
+    int size;
     memoBlock_t* root;
     memoBlock_t* last;
 } mem_t;
@@ -27,10 +26,7 @@ typedef struct {
 mem_t *initMem(){
 
     mem_t* memo = (mem_t*) malloc(sizeof(mem_t));
-    memoBlock_t* initBlock = (mem_t*) malloc(sizeof(memoBlock_t));
-    memoBlock_t* tmp = initBlock->next;
-    memoBlock_t* prevTmp = initBlock;
-
+    memoBlock_t* initBlock = (memoBlock_t*) malloc(sizeof(memoBlock_t));
 
     // First memory space
     initBlock->adr = 0;
@@ -39,56 +35,64 @@ mem_t *initMem(){
     initBlock->next = NULL;
     initBlock->prev = NULL;
     memo->root = initBlock;
+    memo->size = 0;
 
-    while (){
-        
-        tmp->adr = prevTmp->adr + 1;
-        tmp->size = 0;
-        tmp->isfree = true;
-        tmp->next = NULL;
-        tmp->prev = prevTmp;
-
-        tmp = tmp->next
-        prevTmp = prevTmp->next
-    }
-
-    return memo
+    return memo;
 }
 
 // allocates space in bytes (byte_t) using First-Fit, Best-Fit or Worst-Fit
 address_t myAlloc(mem_t *mp, int size){
 
+    bool available = true;
     memoBlock_t* tmp = mp->root;
 
     // Find a free block with an approprieted size
-    while(tmp->isfree == false && tmp->size < size)
+    while(tmp->isfree == false && tmp->size <= size)
     {
         //check if not the last block of the memo
         if (tmp->next != NULL){
             tmp = tmp->next;
         }
         else{
-            printf("Memory is full");
+            available = false;
+            printf("No memblock available");
             break;
         }
     }
+    // Take an existing free block
+    if (available){
+        tmp->size = size;
+        tmp->isfree = false;
+        return tmp->adr;
+    }
+    // Create a new block if memo is not full
+    else{
+        if (mp->size + size <= SIZE){
+            //Create a new block
+            memoBlock_t* block = (memoBlock_t*) malloc(sizeof(memoBlock_t));
+            block->adr = mp->last->adr + 1;
+            block->size = size;
+            block->isfree = false;
+            block->next = NULL;
+            block->prev = mp->last;
+            mp->last = block;
+            return block->adr;
+        }
+        else{
+            printf("Memory is full");
+        }
 
-    // Use the block
-    tmp->isfree = false
+    }
+    return 0;
 
 }
 
-// release memory that has already been allocated previously
-void myFree(mem_t *mp, address_t p, int size){
+int main() {
+    mem_t *mem = initMem();
+    address_t adr1 = myAlloc(mem, 5);
+    address_t adr2 = myAlloc(mem, 6);
 
-}
-
-// assign a value to a byte
-void myWrite(mem_t *mp, address_t p, byte_t val){
-
-}
-
-// read memory from a byte
-byte_t myRead(mem_t *mp, address_t p){
+    printf("%d", adr1);
+    printf("%d", adr2);
 
 }
