@@ -28,7 +28,7 @@ mem_t *initMem(){
     memoBlock_t* initBlock = (memoBlock_t*) malloc(sizeof(memoBlock_t));
 
     // First memory space
-    initBlock->adr = 0;
+    initBlock->adr = 1;
     initBlock->size = 0;
     initBlock->next = NULL;
     initBlock->prev = NULL;
@@ -105,6 +105,11 @@ int exist(mem_t *mp, address_t p, int sz){
     return result;
 }
 
+void backtofirst(mem_t *mp){
+    while( mp->root->prev){
+        mp->root = mp->root->prev;
+    }
+}
 // release memory that has already been allocated previously
 void myFree(mem_t *mp, address_t p, int sz){
     bool prev = false, next = false, state = false, get = false;
@@ -186,5 +191,6 @@ int main() {
     
     //Free
     myFree(mem, adr2, 3);
+    backtofirst(mem);
     myFree(mem, adr1, 2);
 }
