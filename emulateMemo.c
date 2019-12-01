@@ -9,7 +9,6 @@ typedef int address_t;
 typedef struct memoBlock {
     address_t adr;
     int size;
-    bool isfree;
     struct memoBlock *next;
     struct memoBlock *prev;
 } memoBlock_t;
@@ -31,7 +30,6 @@ mem_t *initMem(){
     // First memory space
     initBlock->adr = 0;
     initBlock->size = 0;
-    initBlock->isfree = true;
     initBlock->next = NULL;
     initBlock->prev = NULL;
     memo->root = initBlock;
@@ -51,49 +49,29 @@ address_t myAlloc(mem_t *mp, int size){
     memoBlock_t* block = (memoBlock_t*) malloc(sizeof(memoBlock_t));
 
     if ((mp->size + size) <= SIZE){
+        //Create a new block
+        if (mp->last == NULL){
+            block->adr = mp->root->adr + 1;
+            mp->root->next = block;
+            block->prev = mp->root;
+            mp->last = block;
+        }
+        else{
+            block->adr = mp->last->adr + 1;
+            block->prev = mp->last;
+            mp->last = block;
+        }
+        block->size = size;
+        block->next = NULL;
+        mp->size += size;
+        block->adr = mp->size +1;
+        res = block->adr - size;
+    }
+    else{
         res = -1;
+        printf("Memory is full\n");
     }
 
-    while (tmp != NULL){
-
-        if(tmp->isfree == true){
-            tmp->size = size;
-            tmp->isfree = false;
-            mp->size += size;
-            tmp->adr = mp->size + 1;
-            isAllocated = true;
-            res = tmp->adr - size;
-        }
-        else{
-            tmp = tmp->next;
-        }
-    }
-    // No more free blocks
-    if (!isAllocated){
-        if ((mp->size + size) <= SIZE){
-            //Create a new block
-            if (mp->last == NULL){
-                block->adr = mp->root->adr + 1;
-                mp->root->next = block;
-                block->prev = mp->root;
-                mp->last = block;
-            }
-            else{
-                block->adr = mp->last->adr + 1;
-                block->prev = mp->last;
-                mp->last = block;
-            }
-            block->size = size;
-            block->isfree = false;
-            block->next = NULL;
-            mp->size += size;
-            block->adr = mp->size +1;
-            res = block->adr - size;
-        }
-        else{
-            printf("Memory is full\n");
-        }
-    }
     return res;
 }
 
@@ -107,7 +85,6 @@ void displayMemo(mem_t* mp){
 void displayBlock(memoBlock_t* block){
     printf("Address %d\n", block->adr);
     printf("Size %d\n", block->size);
-    printf("isFree %d\n", block->isfree);
     printf("Prev %p\n", block->prev);
     printf("next %p\n\n", block->next);
 }
