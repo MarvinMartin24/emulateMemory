@@ -37,7 +37,7 @@ mem_t *initMem(){
     memo->root = initBlock;
     memo->last = NULL;
 
-    memo->size = 0;
+    memo->size = initBlock->size;
 
     return memo;
 }
@@ -45,60 +45,56 @@ mem_t *initMem(){
 // allocates space in bytes (byte_t) using First-Fit, Best-Fit or Worst-Fit
 address_t myAlloc(mem_t *mp, int size){
 
-    bool available = true;
+    bool isAllocated = false;
+    address_t res = -1;
     memoBlock_t* tmp = mp->root;
     memoBlock_t* block = (memoBlock_t*) malloc(sizeof(memoBlock_t));
 
+    if ((mp->size + size) <= SIZE){
+        res = -1;
+    }
 
-    // Find a free block with an approprieted size
-    while(tmp->isfree == false && tmp->size <= size)
-    {
-        //check if not the last block of the memo
-        if (tmp->next != NULL){
-            tmp = tmp->next;
+    while (tmp != NULL){
+
+        if(tmp->isfree == true){
+            tmp->size = size;
+            tmp->isfree = false;
+            mp->size += size;
+            tmp->adr = mp->size + 1;
+            isAllocated = true;
+            res = tmp->adr - size;
         }
         else{
-            available = false;
-            printf("No block available\n");
-            break;
+            tmp = tmp->next;
         }
     }
-    // Take an existing free block
-    if (available){
-        tmp->size = size;
-        tmp->isfree = false;
-        mp->size += size;
-        return tmp->adr;
-    }
     // No more free blocks
-    else{
+    if (!isAllocated){
         if ((mp->size + size) <= SIZE){
             //Create a new block
             if (mp->last == NULL){
                 block->adr = mp->root->adr + 1;
                 mp->root->next = block;
                 block->prev = mp->root;
-
+                mp->last = block;
             }
             else{
                 block->adr = mp->last->adr + 1;
-                mp->last->next = block;
                 block->prev = mp->last;
+                mp->last = block;
             }
             block->size = size;
             block->isfree = false;
             block->next = NULL;
             mp->size += size;
-            mp->last = block;
-            return block->adr;
+            block->adr = mp->size +1;
+            res = block->adr - size;
         }
         else{
-            printf("Memory is full");
+            printf("Memory is full\n");
         }
-
     }
-    return 0;
-
+    return res;
 }
 
 void displayMemo(mem_t* mp){
@@ -113,22 +109,24 @@ void displayBlock(memoBlock_t* block){
     printf("Size %d\n", block->size);
     printf("isFree %d\n", block->isfree);
     printf("Prev %p\n", block->prev);
-    printf("netx %p\n\n", block->next);
+    printf("next %p\n\n", block->next);
 }
 
 int main() {
     mem_t *mem = initMem();
-    displayMemo(mem);
-    displayBlock(mem->root);
     address_t adr1 = myAlloc(mem, 5);
-    displayMemo(mem);
-    displayBlock(mem->root);
-
     address_t adr2 = myAlloc(mem, 6);
-    displayMemo(mem);
-    displayBlock(mem->root->next);
+    address_t adr3 = myAlloc(mem, 8);
+    address_t adr4 = myAlloc(mem, 1000);
+    address_t adr5 = myAlloc(mem, 1);
 
-    printf("%d", adr1);
-    printf("%d", adr2);
+
+
+
+    printf("%d ->%d\n", adr1, 5);
+    printf("%d ->%d\n", adr2, 6);
+    printf("%d ->%d\n", adr3, 8);
+    printf("%d ->%d\n", adr4, 1000);
+    printf("%d\n", adr5);
 
 }
