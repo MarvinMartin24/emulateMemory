@@ -28,7 +28,7 @@ mem_t *initMem(){
     memoBlock_t* initBlock = (memoBlock_t*) malloc(sizeof(memoBlock_t));
 
     // First memory space
-    initBlock->adr = 0;
+    initBlock->adr = 1;
     initBlock->size = 0;
     initBlock->next = NULL;
     initBlock->prev = NULL;
@@ -66,6 +66,7 @@ address_t myAlloc(mem_t *mp, int size){
         mp->size += size;
         block->adr = mp->size +1;
         res = block->adr - size;
+        printf("Size : %d\n", block->adr);
     }
     else{
         res = -1;
@@ -89,21 +90,107 @@ void displayBlock(memoBlock_t* block){
     printf("next %p\n\n", block->next);
 }
 
+//Verify that a memory block exists (1 if exists, 0 if not)
+int exist(mem_t *mp, address_t p, int sz){
+    int result = 0;
+    
+    //Verify that memory, address or size exists.
+    if(mp == NULL || p < 0 || sz < 1 || p > 65535 || sz > 65535){
+        exit(EXIT_FAILURE);
+        printf("Liar !!\n");
+    } else {
+        result = 1;
+        printf("Informations are credible. \n");
+    }
+    return result;
+}
+
+void backtofirst(mem_t *mp){
+    while( mp->root->prev){
+        mp->root = mp->root->prev;
+    }
+}
+// release memory that has already been allocated previously
+void myFree(mem_t *mp, address_t p, int sz){
+    bool prev = false, next = false, state = false, get = false;
+    
+    while(!get){
+       printf("p : %d ; mp->root->adr : %d\n", p, mp->root->adr);
+        if(p == mp->root->adr) {
+            if(sz >= mp->root->size){
+                printf("Taille saisie plus grande que l'objet.\nSuppression de tout l'élément...\n");
+                if(mp->root->prev){ //Vérification qu'un block précédent existe
+                    if(mp->root->next){
+                        mp->root->next->prev = NULL;
+                    }
+                    prev = true;
+                }
+                
+                if(!mp->root->next){ //Vérification qu'un block suivant existe
+                    if(mp->root->prev){
+                        mp->root->prev->next = NULL;
+                    }
+                    next = true;
+                }
+                
+                if(prev && next){
+                    memoBlock_t *temp;
+                    temp= mp->root->next->prev;
+                    mp->root->next->prev = mp->root->prev->next;
+                    mp->root->prev->next = temp;
+                }
+                
+                
+                memoBlock_t* block_temp = (memoBlock_t*) malloc(sizeof(memoBlock_t));
+                
+                block_temp = mp->root->next;
+                
+                if(mp->root->next){
+                    state = true;
+                }
+                
+                if(state) {
+                    get = true;
+                    free(block_temp);
+                    printf("La suppression est un succès!\n");
+                } else {
+                    printf("La suppression est un échec.\n");
+                }
+            }
+            if(sz < mp->root->size){
+                printf("Rétrécissement de la mémoire allouée...\n");
+                get = true;
+                mp->root->size = mp->root->size - sz;
+            }
+        } else {
+            if(mp->root->next != NULL){
+                mp->root = mp->root->next;
+            }
+            else{
+                get =  true; // Juste pour sortir du while au cas ou il ne trouve pas de block
+            }
+        }
+    }
+}
+
 int main() {
     mem_t *mem = initMem();
+    
+    //Allocation
     address_t adr1 = myAlloc(mem, 5);
     address_t adr2 = myAlloc(mem, 6);
     address_t adr3 = myAlloc(mem, 8);
     address_t adr4 = myAlloc(mem, 1000);
     address_t adr5 = myAlloc(mem, 1);
 
-
-
-
     printf("%d ->%d\n", adr1, 5);
     printf("%d ->%d\n", adr2, 6);
     printf("%d ->%d\n", adr3, 8);
     printf("%d ->%d\n", adr4, 1000);
     printf("%d\n", adr5);
-
+    
+    //Free
+    myFree(mem, adr2, 3);
+    backtofirst(mem);
+    myFree(mem, adr1, 2);
 }
