@@ -15,6 +15,7 @@ typedef struct memoBlock {
 
 
 typedef struct {
+    int mem[SIZE];
     int size;
     memoBlock_t* root;
     memoBlock_t* last;
@@ -43,51 +44,55 @@ mem_t *initMem(){
 // allocates space in bytes (byte_t) using First-Fit, Best-Fit or Worst-Fit
 address_t myAlloc(mem_t *mp, int size){
 
-    bool isAllocated = false;
+    bool isAllocated = false, get = false;
     address_t res = -1;
     memoBlock_t* tmp = mp->root;
     memoBlock_t* block = (memoBlock_t*) malloc(sizeof(memoBlock_t));
+    while(!get){
+        if(!mp->root->next){
+            if ((mp->size + size) <= SIZE){
+                //Create a new block
+               
+                block->adr = mp->size + 1;
+                mp->root->next = block;
+                block->prev = mp->root;
 
-    if ((mp->size + size) <= SIZE){
-        //Create a new block
-        if (mp->last == NULL){
-            block->adr = mp->root->adr + 1;
-            mp->root->next = block;
-            block->prev = mp->root;
-            mp->last = block;
+                block->size = size;
+                block->next = NULL;
+                mp->size += size;
+
+                res = block->adr;
+                printf("[myAlloc] Size : %d\n", block->adr);
+            }
+            else{
+                res = -1;
+                printf("[myAlloc] Memory is full\n");
+            }
+            get = true;
+        } else{
+            if(mp->root->next != NULL ){
+                mp->root = mp->root->next;
+            } else {
+                get = true; // Juste pour sortir du while au cas ou il ne trouve pas de block
+            }
         }
-        else{
-            block->adr = mp->last->adr + 1;
-            block->prev = mp->last;
-            mp->last = block;
-        }
-        block->size = size;
-        block->next = NULL;
-        mp->size += size;
-        block->adr = mp->size +1;
-        res = block->adr - size;
-        printf("Size : %d\n", block->adr);
-    }
-    else{
-        res = -1;
-        printf("Memory is full\n");
     }
 
     return res;
 }
 
 void displayMemo(mem_t* mp){
-    printf("Size %d\n", mp->size);
-    printf("root %p\n", mp->root);
-    printf("next %p\n\n", mp->root->next);
+    printf("[displayMemo] Size %d\n", mp->size);
+    printf("[displayMemo] root %p\n", mp->root);
+    printf("[displayMemo] next %p\n\n", mp->root->next);
 
 }
 
 void displayBlock(memoBlock_t* block){
-    printf("Address %d\n", block->adr);
-    printf("Size %d\n", block->size);
-    printf("Prev %p\n", block->prev);
-    printf("next %p\n\n", block->next);
+    printf("[displayBlock] Address %d\n", block->adr);
+    printf("[displayBlock] Size %d\n", block->size);
+    printf("[displayBlock] Prev %p\n", block->prev);
+    printf("[displayBlock] next %p\n\n", block->next);
 }
 
 //Verify that a memory block exists (1 if exists, 0 if not)
@@ -97,10 +102,10 @@ int exist(mem_t *mp, address_t p, int sz){
     //Verify that memory, address or size exists.
     if(mp == NULL || p < 0 || sz < 1 || p > 65535 || sz > 65535){
         exit(EXIT_FAILURE);
-        printf("Liar !!\n");
+        printf("[exist] Liar !!\n");
     } else {
         result = 1;
-        printf("Informations are credible. \n");
+        printf("[exist] Informations are credible. \n");
     }
     return result;
 }
@@ -110,15 +115,15 @@ void backtofirst(mem_t *mp){
         mp->root = mp->root->prev;
     }
 }
+
 // release memory that has already been allocated previously
 void myFree(mem_t *mp, address_t p, int sz){
     bool prev = false, next = false, state = false, get = false;
     
     while(!get){
-       printf("p : %d ; mp->root->adr : %d\n", p, mp->root->adr);
         if(p == mp->root->adr) {
             if(sz >= mp->root->size){
-                printf("Taille saisie plus grande que l'objet.\nSuppression de tout l'élément...\n");
+                printf("[myFree] Taille saisie plus grande que l'objet.\n[myFree] Suppression de tout l'élément...\n");
                 if(mp->root->prev){ //Vérification qu'un block précédent existe
                     if(mp->root->next){
                         mp->root->next->prev = NULL;
@@ -152,15 +157,16 @@ void myFree(mem_t *mp, address_t p, int sz){
                 if(state) {
                     get = true;
                     free(block_temp);
-                    printf("La suppression est un succès!\n");
+                    printf("[myFree] La suppression est un succès!\n\n");
                 } else {
-                    printf("La suppression est un échec.\n");
+                    printf("[myFree] La suppression est un échec.\n\n");
                 }
             }
             if(sz < mp->root->size){
-                printf("Rétrécissement de la mémoire allouée...\n");
+                printf("[myFree] Rétrécissement de la mémoire allouée...\n");
                 get = true;
                 mp->root->size = mp->root->size - sz;
+                printf("[myFree] La suppression est un succès!\n\n");
             }
         } else {
             if(mp->root->next != NULL){
@@ -168,6 +174,50 @@ void myFree(mem_t *mp, address_t p, int sz){
             }
             else{
                 get =  true; // Juste pour sortir du while au cas ou il ne trouve pas de block
+            }
+        }
+    }
+}
+
+// assign a value to a byte
+void myWrite(mem_t *mp, address_t p, int val){
+    bool get = false;
+    if(exist(mp, p, 1) == 1){
+        while(!get){
+             if(mp->root->adr == p){
+                 printf("[myWrite] ");
+                 for(int i = 0; i < mp->root->size; i++){
+                     mp->mem[p + i] = val;
+                 }
+                 get = true;
+             } else {
+                 if(mp->root->next != NULL ){
+                     mp->root = mp->root->next;
+                 } else {
+                     get = true; // Juste pour sortir du while au cas ou il ne trouve pas de block
+                 }
+             }
+         }
+     }
+}
+
+// read memory from a byte
+void myRead(mem_t *mp, address_t p){
+    bool get = false;
+    if(exist(mp, p, 1) == 1){
+        while(!get){
+            if(mp->root->adr == p){
+                printf("[myRead] ");
+                for(int i = 0 ; i < mp->root->size; i++){
+                    printf("%d", mp->mem[p+ i]);
+                }
+                get = true;
+            } else {
+                if(mp->root->next){
+                    mp->root = mp->root->next;
+                } else {
+                    get = true; // Juste pour sortir du while au cas ou il ne trouve pas de block
+                }
             }
         }
     }
@@ -193,4 +243,13 @@ int main() {
     myFree(mem, adr2, 3);
     backtofirst(mem);
     myFree(mem, adr1, 2);
+    backtofirst(mem);
+    
+    //Writing
+    myWrite(mem, adr3, 3);
+    backtofirst(mem);
+    
+    //Reading
+    myRead(mem, adr3);
+    backtofirst(mem);
 }
